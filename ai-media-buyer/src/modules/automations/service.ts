@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { CreateAutomationInput, UpdateAutomationInput } from "./validators";
 
@@ -58,6 +59,6 @@ export async function logExecution(
   payload?: Record<string, unknown>
 ) {
   return prisma.automationExecution.create({
-    data: { ruleId, success, message, payload },
+    data: { ruleId, success, message, payload: payload as Prisma.InputJsonValue | undefined },
   });
 }
