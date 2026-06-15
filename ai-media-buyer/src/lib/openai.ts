@@ -1,21 +1,17 @@
 import OpenAI from "openai";
 
-// ============================================================
-// OpenAI Singleton
-// ============================================================
-
 const globalForOpenAI = globalThis as unknown as {
   openai: OpenAI | undefined;
 };
 
-export const openai =
-  globalForOpenAI.openai ??
-  new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForOpenAI.openai = openai;
+function getOpenAI(): OpenAI {
+  if (!globalForOpenAI.openai) {
+    globalForOpenAI.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return globalForOpenAI.openai;
 }
 
-export default openai;
+export { getOpenAI };
+export default getOpenAI;

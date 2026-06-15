@@ -1,4 +1,4 @@
-import { openai } from "@/lib/openai";
+import getOpenAI from "@/lib/openai";
 import { SYSTEM_PROMPTS, AI_CONFIG } from "@/config/ai";
 import type { IAgent, AgentInput, AgentOutput } from "../../types";
 import type { CampaignInsight } from "@/types/campaign";
@@ -13,7 +13,7 @@ export class AnalystAgent implements IAgent {
     "Analisa métricas de performance e gera recomendações de otimização";
 
   async run(input: AgentInput): Promise<AgentOutput> {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: AI_CONFIG.model,
       temperature: 0.3,
       max_tokens: 2048,
@@ -53,7 +53,7 @@ Gasto total: R$ ${avg.spend.toFixed(2)}
 
 Forneça 3 recomendações específicas de otimização.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: AI_CONFIG.model,
       temperature: 0.3,
       messages: [

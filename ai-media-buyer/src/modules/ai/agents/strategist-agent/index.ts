@@ -1,4 +1,4 @@
-import { openai } from "@/lib/openai";
+import getOpenAI from "@/lib/openai";
 import { SYSTEM_PROMPTS, AI_CONFIG } from "@/config/ai";
 import type { IAgent, AgentInput, AgentOutput } from "../../types";
 
@@ -12,7 +12,7 @@ export class StrategistAgent implements IAgent {
     "Analisa objetivos de negócio e cria estratégias de campanha Meta Ads completas";
 
   async run(input: AgentInput): Promise<AgentOutput> {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: AI_CONFIG.model,
       temperature: 0.6,
       max_tokens: 2048,

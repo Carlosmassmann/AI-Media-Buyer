@@ -1,4 +1,4 @@
-import { openai } from "@/lib/openai";
+import getOpenAI from "@/lib/openai";
 import { SYSTEM_PROMPTS, AI_CONFIG } from "@/config/ai";
 import type { IAgent, AgentInput, AgentOutput } from "../../types";
 
@@ -20,7 +20,7 @@ export class CopyAgent implements IAgent {
     "Gera copies, headlines e CTAs persuasivos para anúncios Meta Ads";
 
   async run(input: AgentInput): Promise<AgentOutput> {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: AI_CONFIG.model,
       temperature: 0.9,
       max_tokens: 2048,
@@ -59,7 +59,7 @@ export class CopyAgent implements IAgent {
     audience: string,
     count = 5
   ): Promise<string[]> {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: AI_CONFIG.model,
       temperature: 0.9,
       messages: [

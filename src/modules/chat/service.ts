@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { openai } from "@/lib/openai";
+import getOpenAI from "@/lib/openai";
 import { SYSTEM_PROMPTS, AI_CONFIG } from "@/config/ai";
 
 // ============================================================
@@ -65,7 +65,7 @@ export async function sendMessage(
   });
 
   // Call OpenAI
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: AI_CONFIG.model,
     max_tokens: AI_CONFIG.maxTokens,
     temperature: AI_CONFIG.temperature,
