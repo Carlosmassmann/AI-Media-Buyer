@@ -22,11 +22,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+  const content = (
+    <html lang="pt-BR" className="dark">
+      <body className={`${inter.className} antialiased`}>{children}</body>
+    </html>
+  );
+
+  if (!publishableKey) return content;
+
   return (
-    <ClerkProvider appearance={{ baseTheme: dark }}>
-      <html lang="pt-BR" className="dark">
-        <body className={`${inter.className} antialiased`}>{children}</body>
-      </html>
+    <ClerkProvider publishableKey={publishableKey} appearance={{ baseTheme: dark }}>
+      {content}
     </ClerkProvider>
   );
 }
