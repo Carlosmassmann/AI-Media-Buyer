@@ -1,0 +1,379 @@
+// ============================================================
+// AI MEDIA BUYER — Prisma Schema
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum WorkspaceMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+enum CampaignObjective {
+  AWARENESS
+  TRAFFIC
+  ENGAGEMENT
+  LEADS
+  APP_PROMOTION
+  SALES
+}
+
+enum AutomationStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+}
+
+enum AutomationTriggerType {
+  CPA_EXCEEDS
+  ROAS_BELOW
+  ROAS_EXCEEDS
+  SPEND_EXCEEDS
+  CTR_BELOW
+  IMPRESSIONS_BELOW
+  SCHEDULE
+}
+
+enum AutomationActionType {
+  PAUSE_CAMPAIGN
+  ENABLE_CAMPAIGN
+  INCREASE_BUDGET
+  DECREASE_BUDGET
+  SEND_NOTIFICATION
+  CREATE_REPORT
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum MetaAccountStatus {
+  ACTIVE
+  DISCONNECTED
+  PENDING
+  ERROR
+}
+
+enum AdSetStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+enum AdStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DELETED
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  workspaceMembers WorkspaceMember[]
+  ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
+  chatSessions     ChatSession[]
+
+  @@map("users")
+}
+
+// ============================================================
+// WORKSPACE (Multi-tenant root entity)
+// ============================================================
+
+model Workspace {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  logoUrl     String?
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? // soft delete
+
+  // Relations
+  ownerId      String
+  owner        User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members      WorkspaceMember[]
+  metaAccounts MetaAccount[]
+  campaigns    Campaign[]
+  automations  AutomationRule[]
+  chatSessions ChatSession[]
+
+  @@map("workspaces")
+}
+
+// ============================================================
+// WORKSPACE MEMBER
+// ============================================================
+
+model WorkspaceMember {
+  id          String              @id @default(cuid())
+  role        WorkspaceMemberRole @default(MEMBER)
+  joinedAt    DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("workspace_members")
+}
+
+// ============================================================
+// META ADS ACCOUNT
+// ============================================================
+
+model MetaAccount {
+  id            String            @id @default(cuid())
+  accountId     String            // Meta Ad Account ID (act_xxxx)
+  accountName   String
+  accessToken   String            // encrypted in production
+  tokenExpiresAt DateTime?
+  status        MetaAccountStatus @default(PENDING)
+  currency      String            @default("BRL")
+  timezone      String            @default("America/Sao_Paulo")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaigns   Campaign[]
+
+  @@unique([workspaceId, accountId])
+  @@map("meta_accounts")
+}
+
+// ============================================================
+// CAMPAIGN
+// ============================================================
+
+model Campaign {
+  id              String            @id @default(cuid())
+  metaCampaignId  String?           // ID na Meta após criação
+  name            String
+  objective       CampaignObjective
+  status          CampaignStatus    @default(DRAFT)
+  dailyBudget     Float?
+  lifetimeBudget  Float?
+  startDate       DateTime?
+  endDate         DateTime?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?         // soft delete
+
+  // Relations
+  workspaceId   String
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  metaAccountId String?
+  metaAccount   MetaAccount? @relation(fields: [metaAccountId], references: [id])
+  adSets        AdSet[]
+  insights      CampaignInsight[]
+
+  @@map("campaigns")
+}
+
+// ============================================================
+// AD SET
+// ============================================================
+
+model AdSet {
+  id           String      @id @default(cuid())
+  metaAdSetId  String?
+  name         String
+  status       AdSetStatus @default(ACTIVE)
+  dailyBudget  Float?
+  targeting    Json?       // targeting spec as JSON
+  bidAmount    Float?
+  optimizationGoal String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
+
+  // Relations
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads        Ad[]
+
+  @@map("ad_sets")
+}
+
+// ============================================================
+// AD
+// ============================================================
+
+model Ad {
+  id         String   @id @default(cuid())
+  metaAdId   String?
+  name       String
+  status     AdStatus @default(ACTIVE)
+  headline   String?
+  body       String?
+  callToAction String?
+  imageUrl   String?
+  videoUrl   String?
+  destinationUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  // Relations
+  adSetId String
+  adSet   AdSet  @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+
+  @@map("ads")
+}
+
+// ============================================================
+// CAMPAIGN INSIGHTS (métricas)
+// ============================================================
+
+model CampaignInsight {
+  id          String   @id @default(cuid())
+  date        DateTime
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  spend       Float    @default(0)
+  leads       Int      @default(0)
+  purchases   Int      @default(0)
+  revenue     Float    @default(0)
+  ctr         Float    @default(0)
+  cpc         Float    @default(0)
+  cpa         Float    @default(0)
+  roas        Float    @default(0)
+  reach       Int      @default(0)
+  frequency   Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, date])
+  @@map("campaign_insights")
+}
+
+// ============================================================
+// AUTOMATION RULE
+// ============================================================
+
+model AutomationRule {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  status      AutomationStatus     @default(DRAFT)
+  triggerType AutomationTriggerType
+  triggerValue Float               // threshold value
+  actionType  AutomationActionType
+  actionValue Float?               // e.g., budget increment %
+  checkInterval Int                @default(60) // minutes
+  lastRunAt   DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // Relations
+  workspaceId String
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  executions  AutomationExecution[]
+
+  @@map("automation_rules")
+}
+
+// ============================================================
+// AUTOMATION EXECUTION (log)
+// ============================================================
+
+model AutomationExecution {
+  id         String   @id @default(cuid())
+  success    Boolean
+  message    String?
+  payload    Json?
+  executedAt DateTime @default(now())
+
+  // Relations
+  ruleId String
+  rule   AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@map("automation_executions")
+}
+
+// ============================================================
+// CHAT SESSION
+// ============================================================
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  title     String   @default("Nova conversa")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+// ============================================================
+// CHAT MESSAGE
+// ============================================================
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      ChatRole
+  content   String   @db.Text
+  metadata  Json?    // tool calls, citations, etc.
+  tokens    Int?
+  createdAt DateTime @default(now())
+
+  // Relations
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
