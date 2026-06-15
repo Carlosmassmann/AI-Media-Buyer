@@ -7,6 +7,8 @@ import { APP_CONFIG } from "@/config/app";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default: APP_CONFIG.name,
